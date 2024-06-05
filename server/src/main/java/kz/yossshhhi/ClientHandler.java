@@ -24,12 +24,23 @@ public class ClientHandler {
                 while (true) {
                     String msg = in.readUTF();
                     if (msg.startsWith("/login ")) {
-                        String input = msg.split("\\s+")[1];
-                        if (server.existsByUsername(input)) {
-                            sendMessage("/login_failed " + input);
+                        String[] tokens = msg.split("\\s+", 3);
+                        String login = tokens[1];
+                        String password = tokens[2];
+
+                        String nick = server.getAuthenticationProvider()
+                                .getUsernameByLoginAndPassword(login, password);
+                        if (nick == null) {
+                            sendMessage("/login_failed Некорректный логин или пароль");
+                            continue;
+                        }
+
+                        if (server.existsByUsername(nick)) {
+                            sendMessage("/login_failed " + "Пользователь с именем " + nick + " уже в сети");
                         } else {
-                            username = input;
+                            username = nick;
                             sendMessage("/login_ok " + username);
+                            server.subscribe(this);
                             break;
                         }
                     }
@@ -50,8 +61,12 @@ public class ClientHandler {
 
     }
 
-    public void sendMessage(String msg) throws IOException {
-        out.writeUTF(msg);
+    public void sendMessage(String msg) {
+        try {
+            out.writeUTF(msg);
+        } catch (IOException e) {
+            disconnect();
+        }
     }
 
     public void disconnect() {
@@ -65,7 +80,7 @@ public class ClientHandler {
         }
     }
     
-    private boolean msgHandler(String msg) throws IOException {
+    private boolean msgHandler(String msg) {
         if (msg.startsWith("/p ")) {
             privateMsgHandler(msg);
             return false;
@@ -79,7 +94,7 @@ public class ClientHandler {
         return true;
     }
 
-    private void privateMsgHandler(String msg) throws IOException {
+    private void privateMsgHandler(String msg) {
         String[] split = msg.split("\\s+", 3);
         if (split.length < 3) {
             sendMessage("/bad_request Некорректный ввод данных");
@@ -87,8 +102,10 @@ public class ClientHandler {
         }
         String recipient = split[1];
         String message = split[2];
-        if (server.sendPrivateMessage(username, recipient, message)) {
+        if (server.sendPrivateMessage(this, recipient, message)) {
             sendMessage("/bad_request Пользователь не найден");
+        } else {
+            msgCounter++;
         }
     }
 

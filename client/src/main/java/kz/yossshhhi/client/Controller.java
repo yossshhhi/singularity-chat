@@ -2,6 +2,7 @@ package kz.yossshhhi.client;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 
@@ -9,15 +10,21 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.URL;
+import java.util.ResourceBundle;
 
-public class Controller {
+public class Controller implements Initializable {
 
     @FXML
     private TextField msgField, loginField;
     @FXML
+    private PasswordField passwordField;
+    @FXML
     private TextArea msgArea;
     @FXML
     private HBox loginBox, msgBox;
+    @FXML
+    ListView<String> clientsList;
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
@@ -30,11 +37,15 @@ public class Controller {
             loginBox.setManaged(true);
             msgBox.setVisible(false);
             msgBox.setManaged(false);
+            clientsList.setVisible(false);
+            clientsList.setManaged(false);
         } else {
             loginBox.setVisible(false);
             loginBox.setManaged(false);
             msgBox.setVisible(true);
             msgBox.setManaged(true);
+            clientsList.setVisible(true);
+            clientsList.setManaged(true);
         }
     }
 
@@ -52,7 +63,7 @@ public class Controller {
                             setUsername(msg.split("\\s+")[1]);
                             break;
                         } else if (msg.startsWith("/login_failed")) {
-                            alertMessage("Пользователь с именем " + msg.split("\\s+")[1] + " уже существует");
+                            alertMessage(msg.split("\\s+", 2)[1]);
                         }
                     }
                     // цикл общения
@@ -61,6 +72,14 @@ public class Controller {
                         if (msg.startsWith("/bad_request")) {
                             String alertMsg = msg.split("\\s+", 2)[1];
                             alertMessage(alertMsg);
+                        } else if (msg.startsWith("/clients_list ")) {
+                            Platform.runLater(() -> {
+                                clientsList.getItems().clear();
+                                String[] tokens = msg.split("\\s+");
+                                for (int i = 1; i < tokens.length; i++) {
+                                    clientsList.getItems().add(tokens[i]);
+                                }
+                            });
                         } else {
                             msgArea.appendText(msg + "\n");
                         }
@@ -83,12 +102,12 @@ public class Controller {
             connect();
         }
 
-        if (loginField.getText().isEmpty()) {
-            alertMessage("Имя пользователя не может быть пустым");
+        if (loginField.getText().isEmpty() || passwordField.getText().isEmpty()) {
+            alertMessage("Имя пользователя или пароль не может быть пустыми");
             return;
         }
         try {
-            out.writeUTF("/login " + loginField.getText());
+            out.writeUTF("/login " + loginField.getText() + " " + passwordField.getText());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -119,5 +138,10 @@ public class Controller {
             Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
             alert.showAndWait();
         });
+    }
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        setUsername(null);
     }
 }
