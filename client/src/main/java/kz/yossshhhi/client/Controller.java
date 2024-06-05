@@ -1,5 +1,6 @@
 package kz.yossshhhi.client;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -24,7 +25,7 @@ public class Controller {
 
     public void setUsername(String username) {
         this.username = username;
-        if(this.username == null) {
+        if (this.username == null) {
             loginBox.setVisible(true);
             loginBox.setManaged(true);
             msgBox.setVisible(false);
@@ -48,17 +49,21 @@ public class Controller {
                     while (true) {
                         String msg = in.readUTF();
                         if (msg.startsWith("/login_ok ")) {
-                            // client -> server /login Bob
-                            // server -> client /login_ok Bob
-                            // server -> client /login_failed Bob
                             setUsername(msg.split("\\s+")[1]);
                             break;
+                        } else if (msg.startsWith("/login_failed")) {
+                            alertMessage("Пользователь с именем " + msg.split("\\s+")[1] + " уже существует");
                         }
                     }
                     // цикл общения
                     while (true) {
                         String msg = in.readUTF();
-                        msgArea.appendText(msg + "\n");
+                        if (msg.startsWith("/bad_request")) {
+                            String alertMsg = msg.split("\\s+", 2)[1];
+                            alertMessage(alertMsg);
+                        } else {
+                            msgArea.appendText(msg + "\n");
+                        }
                     }
                 }catch (IOException e){
                     e.printStackTrace();
@@ -79,8 +84,7 @@ public class Controller {
         }
 
         if (loginField.getText().isEmpty()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Имя пользователя не может быть пустым", ButtonType.OK);
-            alert.showAndWait();
+            alertMessage("Имя пользователя не может быть пустым");
             return;
         }
         try {
@@ -106,8 +110,14 @@ public class Controller {
             out.writeUTF(msgField.getText());
             msgField.clear();
         } catch (IOException e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Невозможно отправить сообщение");
-            alert.showAndWait();
+            alertMessage("Невозможно отправить сообщение");
         }
+    }
+
+    private void alertMessage(String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
+            alert.showAndWait();
+        });
     }
 }

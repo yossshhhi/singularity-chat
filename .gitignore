@@ -37,3 +37,5 @@ build/
 ### Mac OS ###
 .DS_Store
 /.idea/.gitignore
+/client/src/test/java/kz/yossshhhi/AppTest.java
+/server/src/test/java/kz/yossshhhi/AppTest.java
