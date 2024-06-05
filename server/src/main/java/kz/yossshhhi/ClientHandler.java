@@ -90,23 +90,42 @@ public class ClientHandler {
         } else if (msg.equals("/stat")) {
             sendMessage("Количество сообщений - " + msgCounter);
             return false;
+        } else if (msg.startsWith("/change_nick ")) {
+            changeNickHandler(msg);
+            return false;
         }
         return true;
     }
 
     private void privateMsgHandler(String msg) {
-        String[] split = msg.split("\\s+", 3);
-        if (split.length < 3) {
+        String[] tokens = msg.split("\\s+", 3);
+        if (tokens.length < 3) {
             sendMessage("/bad_request Некорректный ввод данных");
             return;
         }
-        String recipient = split[1];
-        String message = split[2];
+        String recipient = tokens[1];
+        String message = tokens[2];
         if (server.sendPrivateMessage(this, recipient, message)) {
             sendMessage("/bad_request Пользователь не найден");
         } else {
             msgCounter++;
         }
+    }
+
+    private void changeNickHandler(String msg) {
+         String[] tokens = msg.split("\\s+");
+        if (tokens.length < 2) {
+            sendMessage("/bad_request Некорректный ввод данных");
+            return;
+        }
+        String newNick = tokens[1];
+        String changedNick = server.getAuthenticationProvider().changeNick(username, newNick);
+        if (changedNick.equals(username)) {
+            sendMessage("/bad_request Данный ник уже занят");
+            return;
+        }
+        username = newNick;
+        server.sendClientList();
     }
 
     public String getUsername() {
